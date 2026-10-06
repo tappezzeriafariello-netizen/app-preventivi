@@ -26,7 +26,7 @@ from flask import (
     url_for,
 )
 from fpdf import FPDF
-from fpdf.enums import XPos, YPos
+from fpdf.enums import MethodReturnValue, XPos, YPos
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
@@ -265,21 +265,63 @@ def genera_pdf_bytes(dati: dict, azienda: dict) -> bytes:
     )
     pdf.ln(8)
 
-    pdf.set_font("Helvetica", style="B", size=9)
-    pdf.cell(15, 8, text="Q.TA'", border=1, align="C")
-    pdf.cell(115, 8, text="DESCRIZIONE OGGETTO", border=1, align="L")
-    pdf.cell(30, 8, text="PREZZO UNIT.", border=1, align="C")
-    pdf.cell(30, 8, text="PREZZO TOT.", border=1, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
-
-    pdf.set_font("Helvetica", size=9)
-    for art in articoli:
-        pdf.cell(15, 8, text=str(art["qty"]), border=1, align="C")
-        desc = art["desc"] if len(art["desc"]) < 65 else art["desc"][:62] + "..."
-        pdf.cell(115, 8, text=pulisci_testo(desc), border=1, align="L")
-        pdf.cell(30, 8, text=f"EUR {float(art['prezzo']):.2f}", border=1, align="R")
+    def draw_items_header() -> None:
+        pdf.set_font("Helvetica", style="B", size=9)
+        pdf.cell(15, 8, text="Q.TA'", border=1, align="C")
+        pdf.cell(115, 8, text="DESCRIZIONE OGGETTO", border=1, align="L")
+        pdf.cell(30, 8, text="PREZZO UNIT.", border=1, align="C")
         pdf.cell(
             30,
             8,
+            text="PREZZO TOT.",
+            border=1,
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+            align="C",
+        )
+
+    draw_items_header()
+
+    pdf.set_font("Helvetica", size=9)
+    for art in articoli:
+        desc = pulisci_testo(art["desc"])
+        desc_height = pdf.multi_cell(
+            115,
+            5,
+            text=desc,
+            dry_run=True,
+            output=MethodReturnValue.HEIGHT,
+        )
+        row_height = max(8, desc_height)
+        if pdf.will_page_break(row_height):
+            pdf.add_page()
+            draw_items_header()
+            pdf.set_font("Helvetica", size=9)
+
+        x = pdf.l_margin
+        y = pdf.get_y()
+        pdf.set_xy(x, y)
+        pdf.cell(15, row_height, text=str(art["qty"]), border=1, align="C")
+        pdf.rect(x + 15, y, 115, row_height)
+        pdf.set_xy(x + 15, y)
+        pdf.multi_cell(
+            115,
+            5,
+            text=desc,
+            new_x=XPos.RIGHT,
+            new_y=YPos.TOP,
+        )
+        pdf.set_xy(x + 130, y)
+        pdf.cell(
+            30,
+            row_height,
+            text=f"EUR {float(art['prezzo']):.2f}",
+            border=1,
+            align="R",
+        )
+        pdf.cell(
+            30,
+            row_height,
             text=f"EUR {float(art['totale']):.2f}",
             border=1,
             new_x=XPos.LMARGIN,
