@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Impostazioni Azienda{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Impostazioni azienda</h1>
+    <p>Dati intestazione PDF, contatti e logo.</p>
+  </div>
+</div>
+
+<section class="panel">
+  <h2>Google Drive</h2>
+  {% if drive.enabled and drive.ok %}
+    <p style="margin:0;color:var(--ok);font-weight:600">Connesso — i salvataggi sono persistenti su Drive.</p>
+    {% if drive.service_account %}
+    <p style="margin:0.4rem 0 0;color:var(--muted);font-size:0.9rem">Account: {{ drive.service_account }}</p>
+    {% endif %}
+  {% elif drive.enabled %}
+    <p style="margin:0;color:var(--danger);font-weight:600">Configurato ma errore di connessione.</p>
+    <p style="margin:0.4rem 0 0;color:var(--muted);font-size:0.9rem">{{ drive.error }}</p>
+  {% else %}
+    <p style="margin:0;color:var(--muted)">Non configurato. Su Render imposta <code>GOOGLE_SERVICE_ACCOUNT_JSON</code> e <code>GOOGLE_DRIVE_FOLDER_ID</code>.</p>
+  {% endif %}
+</section>
+
+<form class="panel" method="post" action="{{ url_for('api_azienda') }}" enctype="multipart/form-data">
+  <h2>Profilo</h2>
+  <div style="margin-bottom:1rem">
+    <label for="logo">Logo (PNG/JPG)</label>
+    <input type="file" id="logo" name="logo" accept=".png,.jpg,.jpeg,.webp">
+    {% if azienda.logo_path %}
+      <img class="logo-preview" src="{{ url_for('serve_logo') }}" alt="Logo azienda">
+    {% endif %}
+  </div>
+  <div style="margin-bottom:1rem">
+    <label for="titolo">Nome società / intestatario</label>
+    <input type="text" id="titolo" name="titolo" value="{{ azienda.titolo or '' }}">
+  </div>
+  <div style="margin-bottom:1rem">
+    <label for="bio">Indirizzo / telefono / info contatto</label>
+    <textarea id="bio" name="bio">{{ azienda.bio or '' }}</textarea>
+  </div>
+  <div style="margin-bottom:1rem">
+    <label for="piva">Partita IVA</label>
+    <input type="text" id="piva" name="piva" value="{{ azienda.piva or '' }}">
+  </div>
+  <div class="grid-2">
+    <div>
+      <label for="cf">Codice fiscale</label>
+      <input type="text" id="cf" name="cf" value="{{ azienda.cf or '' }}">
+    </div>
+    <div>
+      <label for="iban">IBAN per bonifico</label>
+      <input type="text" id="iban" name="iban" value="{{ azienda.iban or '' }}">
+    </div>
+  </div>
+  <div style="margin-top:1.25rem">
+    <button type="submit" class="btn">Salva configurazione</button>
+  </div>
+</form>
+{% endblock %}

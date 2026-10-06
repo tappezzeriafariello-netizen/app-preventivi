@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Compila Preventivo{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Compila preventivo</h1>
+    <p>Stesse funzioni dell’app desktop: clienti, righe, totali e PDF.</p>
+  </div>
+  <div class="toolbar">
+    <button type="button" class="btn btn-secondary" id="btnNuovo">Nuovo</button>
+    <button type="button" class="btn btn-secondary" id="btnSalva">Salva</button>
+    <button type="button" class="btn" id="btnPdf">Esporta PDF</button>
+  </div>
+</div>
+
+<input type="hidden" id="preventivoId" value="{{ preventivo.id if preventivo else '' }}">
+
+<section class="panel">
+  <h2>Dati preventivo e cliente</h2>
+  <div class="grid-2">
+    <div>
+      <label for="cliente">Cliente</label>
+      <input list="listaClienti" type="text" id="cliente" placeholder="Nome cliente"
+             value="{{ preventivo.cliente if preventivo else '' }}">
+      <datalist id="listaClienti">
+        {% for c in clienti %}
+        <option value="{{ c }}"></option>
+        {% endfor %}
+      </datalist>
+    </div>
+    <div>
+      <label for="data">Data</label>
+      <input type="text" id="data" value="{{ preventivo.data if preventivo else today }}">
+    </div>
+    <div>
+      <label for="consegna">Data consegna</label>
+      <input type="text" id="consegna" value="{{ preventivo.consegna if preventivo else 'CONSEGNA ENTRO...' }}">
+    </div>
+    <div>
+      <label for="pagamento">Pagamento</label>
+      <input type="text" id="pagamento" value="{{ preventivo.pagamento if preventivo else 'DA CONCORDARE' }}">
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Aggiungi riga</h2>
+  <div class="row-add">
+    <div>
+      <label for="qty">Q.tà</label>
+      <input type="number" id="qty" min="1" step="1">
+    </div>
+    <div>
+      <label for="desc">Descrizione</label>
+      <input type="text" id="desc">
+    </div>
+    <div>
+      <label for="prezzo">Prezzo unit. (€)</label>
+      <input type="text" id="prezzo" inputmode="decimal">
+    </div>
+    <button type="button" class="btn" id="btnAdd">Aggiungi</button>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Articoli</h2>
+  <table class="data" id="tabella">
+    <thead>
+      <tr>
+        <th>Q.tà</th>
+        <th>Descrizione</th>
+        <th class="num">Prezzo unit.</th>
+        <th class="num">Totale</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <p class="empty" id="emptyMsg">Nessun articolo. Aggiungi la prima riga.</p>
+</section>
+
+<section class="panel">
+  <h2>Configurazione economica</h2>
+  <div class="grid-3" style="margin-bottom:1rem">
+    <div>
+      <label for="iva">IVA (%)</label>
+      <input type="text" id="iva" value="{{ preventivo.iva if preventivo else '0' }}">
+    </div>
+    <div>
+      <label for="sconto">Sconto (%)</label>
+      <input type="text" id="sconto" value="{{ preventivo.sconto if preventivo else '0' }}">
+    </div>
+    <div>
+      <label for="acconto">Acconto (%)</label>
+      <input type="text" id="acconto" value="{{ preventivo.acconto if preventivo else '0' }}">
+    </div>
+  </div>
+  <div class="totals">
+    <div class="metrics">
+      <div class="metric">Imponibile<strong id="mImp">0.00 €</strong></div>
+      <div class="metric">Totale (+IVA)<strong id="mTot">0.00 €</strong></div>
+      <div class="metric">Totale scontato<strong id="mScont">0.00 €</strong></div>
+      <div class="metric saldo">Saldo<strong id="mSaldo">0.00 €</strong></div>
+    </div>
+    <span id="saveStatus" style="color:var(--muted);font-size:0.9rem"></span>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.__INITIAL_ARTICOLI__ = {{ (preventivo.articoli if preventivo else []) | tojson }};
+  window.__LOAD_DRAFT__ = {{ 'true' if request.args.get('draft') else 'false' }};
+</script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

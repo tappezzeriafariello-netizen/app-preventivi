@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Preventivi{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% if request.endpoint != 'login' %}
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <strong>Preventivi</strong>
+      <span>{{ azienda.titolo if azienda and azienda.titolo else 'Web App aziendale' }}</span>
+    </div>
+    <nav class="nav">
+      <a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint == 'index' else '' }}">Compila</a>
+      <a href="{{ url_for('archivio') }}" class="{{ 'active' if request.endpoint == 'archivio' else '' }}">Archivio</a>
+      <a href="{{ url_for('files_page') }}" class="{{ 'active' if request.endpoint == 'files_page' else '' }}">File manager</a>
+      <a href="{{ url_for('azienda_page') }}" class="{{ 'active' if request.endpoint == 'azienda_page' else '' }}">Azienda</a>
+    </nav>
+    {% if has_password %}
+    <a class="btn btn-ghost" href="{{ url_for('logout') }}" style="margin-top:auto">Esci</a>
+    {% endif %}
+  </aside>
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-wrap">
+        {% for cat, msg in messages %}
+          <div class="flash {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+  {% block login %}{% endblock %}
+{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

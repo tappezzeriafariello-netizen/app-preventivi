@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Archivio Preventivi{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Archivio</h1>
+    <p>Tutti i preventivi salvati nel database.</p>
+  </div>
+  <a class="btn" href="{{ url_for('index') }}">Nuovo preventivo</a>
+</div>
+
+<section class="panel">
+  {% if preventivi %}
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Data</th>
+        <th class="num">Totale</th>
+        <th class="num">Saldo</th>
+        <th>Aggiornato</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in preventivi %}
+      <tr>
+        <td>{{ p.cliente or '—' }}</td>
+        <td>{{ p.data }}</td>
+        <td class="num">{{ '%.2f'|format(p.totale) }} €</td>
+        <td class="num">{{ '%.2f'|format(p.saldo) }} €</td>
+        <td>{{ p.updated_at.replace('T', ' ') if p.updated_at else '' }}</td>
+        <td>
+          <div class="file-actions">
+            <a class="btn btn-secondary" href="{{ url_for('index', id=p.id) }}">Apri</a>
+            {% if p.nome_file %}
+            <a class="btn btn-secondary" href="{{ url_for('files_download', folder='pdf', name=p.nome_file ~ '.pdf') }}">PDF</a>
+            {% endif %}
+            <button type="button" class="btn btn-danger" data-del="{{ p.id }}">Elimina</button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Nessun preventivo in archivio. Compilane uno e premi Salva.</p>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('[data-del]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if (!confirm('Eliminare questo preventivo?')) return;
+    const id = btn.getAttribute('data-del');
+    const res = await fetch('/api/preventivi/' + id, { method: 'DELETE' });
+    if (res.ok) location.reload();
+    else alert('Errore eliminazione');
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Accesso{% endblock %}
+{% block login %}
+<div class="login-wrap">
+  <form class="login-card" method="post">
+    <h1>Accesso</h1>
+    <p>Inserisci la password aziendale per continuare.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="flash {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required autofocus style="margin-bottom:1rem">
+    <button type="submit" class="btn" style="width:100%">Entra</button>
+  </form>
+</div>
+{% endblock %}
