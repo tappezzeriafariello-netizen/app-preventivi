@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+data/*.db
+data/files/preventivi/*
+data/files/pdf/*
+data/logo/*
+!data/files/preventivi/.gitkeep
+!data/files/pdf/.gitkeep
+!data/logo/.gitkeep
