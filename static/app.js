@@ -152,9 +152,13 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Errore");
       $("preventivoId").value = data.id;
-      $("saveStatus").textContent = data.drive
-        ? `Salvato su Google Drive (${data.file})`
-        : `Salvato · PDF e .prev in File manager (${data.file})`;
+      if (data.drive && data.drive_ok) {
+        $("saveStatus").textContent = `Salvato su Google Drive (${data.file})`;
+      } else if (data.drive && data.drive_error) {
+        $("saveStatus").textContent = `Salvato in archivio, ma Drive ha fallito: ${data.drive_error}`;
+      } else {
+        $("saveStatus").textContent = `Salvato · PDF e .prev in File manager (${data.file})`;
+      }
     } catch (e) {
       $("saveStatus").textContent = "";
       alert(e.message || "Errore salvataggio");

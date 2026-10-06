@@ -351,20 +351,20 @@ def upsert_cliente(nome: str) -> None:
     get_db().commit()
 
 
-def sync_db() -> None:
+def sync_db() -> bool:
     """Chiude eventuali connessioni e carica il DB su Drive."""
     db = g.pop("db", None)
     if db is not None:
         db.close()
-    drive_store.push_db(DB_PATH)
+    return drive_store.push_db(DB_PATH)
 
 
-def sync_file(local: Path, rel: str) -> None:
-    drive_store.push_path(local, rel)
+def sync_file(local: Path, rel: str) -> bool:
+    return drive_store.push_path(local, rel)
 
 
-def sync_delete(rel: str) -> None:
-    drive_store.delete_remote(rel)
+def sync_delete(rel: str) -> bool:
+    return drive_store.delete_remote(rel)
 
 
 def safe_rel_path(folder: str, name: str) -> Path | None:
@@ -464,6 +464,14 @@ def files_page():
         folder = "preventivi"
     path = FILES_DIR / folder if folder else FILES_DIR
     path.mkdir(parents=True, exist_ok=True)
+
+    # Allinea la cache locale con Drive (così i file non "spariscono" a caso)
+    if drive_store.enabled():
+        for remote in drive_store.list_remote_files_detailed(f"files/{folder}"):
+            local = path / remote["name"]
+            if not local.exists():
+                drive_store.download_file(f"files/{folder}/{remote['name']}", local)
+
     items = []
     for p in sorted(path.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
         if p.name.startswith("."):
@@ -477,7 +485,13 @@ def files_page():
                 "folder": folder,
             }
         )
-    return render_template("files.html", items=items, folder=folder)
+    return render_template(
+        "files.html",
+        items=items,
+        folder=folder,
+        drive_error=drive_store.last_error(),
+        drive_enabled=drive_store.enabled(),
+    )
 
 
 # ---------- API Azienda / Clienti ----------
@@ -643,6 +657,7 @@ def api_salva_preventivo():
     sync_file(prev_path, f"files/preventivi/{base_name}.prev")
     sync_file(pdf_path, f"files/pdf/{base_name}.pdf")
     sync_db()
+    drive_ok = drive_store.enabled() and not drive_store.last_error()
 
     return jsonify(
         {
@@ -653,6 +668,8 @@ def api_salva_preventivo():
             "pdf": f"pdf/{base_name}.pdf",
             "totali": tot,
             "drive": drive_store.enabled(),
+            "drive_ok": drive_ok,
+            "drive_error": drive_store.last_error(),
         }
     )
 

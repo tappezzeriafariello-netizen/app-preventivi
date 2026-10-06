@@ -4,9 +4,13 @@
 <div class="page-head">
   <div>
     <h1>File manager</h1>
-    <p>Preventivi editabili (.prev) e PDF generati, salvati sul server.</p>
+    <p>Preventivi (.prev) e PDF — sincronizzati da Google Drive quando è attivo.</p>
   </div>
 </div>
+
+{% if drive_enabled and drive_error %}
+<div class="flash error">Problema Drive: {{ drive_error }}</div>
+{% endif %}
 
 <section class="panel">
   <div class="toolbar" style="margin-bottom:1rem">

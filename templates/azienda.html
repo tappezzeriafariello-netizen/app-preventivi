@@ -11,15 +11,17 @@
 <section class="panel">
   <h2>Google Drive</h2>
   {% if drive.enabled and drive.ok %}
-    <p style="margin:0;color:var(--ok);font-weight:600">Connesso — i salvataggi sono persistenti su Drive.</p>
+    <p style="margin:0;color:var(--ok);font-weight:600">Connesso e scrittura OK (modalità: {{ drive.mode }}).</p>
     {% if drive.service_account %}
     <p style="margin:0.4rem 0 0;color:var(--muted);font-size:0.9rem">Account: {{ drive.service_account }}</p>
     {% endif %}
+    <p style="margin:0.4rem 0 0;color:var(--muted);font-size:0.9rem">I file compaiono nella cartella Drive il cui ID hai messo in GOOGLE_DRIVE_FOLDER_ID.</p>
   {% elif drive.enabled %}
-    <p style="margin:0;color:var(--danger);font-weight:600">Configurato ma errore di connessione.</p>
+    <p style="margin:0;color:var(--danger);font-weight:600">Drive raggiungibile in lettura, ma SALVATAGGIO NON FUNZIONA.</p>
     <p style="margin:0.4rem 0 0;color:var(--muted);font-size:0.9rem">{{ drive.error }}</p>
+    <p style="margin:0.6rem 0 0;font-size:0.9rem">Soluzione: usa OAuth (script <code>get_drive_token.py</code>) e le variabili <code>GOOGLE_OAUTH_*</code> su Render. Poi puoi togliere la service account.</p>
   {% else %}
-    <p style="margin:0;color:var(--muted)">Non configurato. Su Render imposta <code>GOOGLE_SERVICE_ACCOUNT_JSON</code> e <code>GOOGLE_DRIVE_FOLDER_ID</code>.</p>
+    <p style="margin:0;color:var(--muted)">Non configurato. Serve OAuth oppure service account + folder ID.</p>
   {% endif %}
 </section>
 
