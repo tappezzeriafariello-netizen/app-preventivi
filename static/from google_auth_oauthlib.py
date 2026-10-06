@@ -1,3 +1,5 @@
+import os
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -6,8 +8,8 @@ from googleapiclient.discovery import build
 # MODIFY THESE VALUES
 # ============================================================
 
-CLIENT_ID = "33341422835-ak5bqa9pc505eml91m4hmeoobpht6593.apps.googleusercontent.com"
-CLIENT_SECRET = "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"
+CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "").strip()
+CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
 
 # Drive permissions:
 # https://www.googleapis.com/auth/drive
@@ -17,6 +19,11 @@ TOKEN_FILE = "token.json"
 
 
 def get_drive_credentials():
+    if not CLIENT_ID or not CLIENT_SECRET:
+        raise RuntimeError(
+            "Imposta GOOGLE_OAUTH_CLIENT_ID e GOOGLE_OAUTH_CLIENT_SECRET."
+        )
+
     credentials = None
 
     # If we already have a saved token, use it.

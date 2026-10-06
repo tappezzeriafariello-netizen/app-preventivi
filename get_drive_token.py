@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-SCOPES = ["https://oauth2.googleapis.com/auth/drive"]
+SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 
 def main() -> None:
