@@ -171,11 +171,21 @@ def pulisci_testo(testo: str) -> str:
     return testo
 
 
-def calcola_totali(articoli: list, iva_perc: float, sconto_perc: float, acconto_perc: float):
+def calcola_totali(
+    articoli: list,
+    iva_perc: float,
+    sconto_perc: float,
+    acconto_perc: float,
+    sconto_euro: float | None = None,
+):
     imponibile = sum(float(a.get("totale", 0)) for a in articoli)
     valore_iva = imponibile * (iva_perc / 100)
     totale = imponibile + valore_iva
-    valore_sconto = totale * (sconto_perc / 100)
+    valore_sconto = (
+        max(0, sconto_euro)
+        if sconto_euro is not None
+        else totale * (sconto_perc / 100)
+    )
     totale_scontato = totale - valore_sconto
     valore_acconto = totale_scontato * (acconto_perc / 100)
     saldo = totale_scontato - valore_acconto
@@ -214,8 +224,16 @@ def genera_pdf_bytes(dati: dict, azienda: dict) -> bytes:
     articoli = dati["articoli"]
     iva = float(dati.get("iva") or 0)
     sconto = float(dati.get("sconto") or 0)
+    sconto_tipo = dati.get("sconto_tipo") or "percentuale"
+    sconto_euro = float(dati.get("sconto_euro") or 0)
     acconto = float(dati.get("acconto") or 0)
-    t = calcola_totali(articoli, iva, sconto, acconto)
+    t = calcola_totali(
+        articoli,
+        iva,
+        sconto,
+        acconto,
+        sconto_euro if sconto_tipo == "euro" else None,
+    )
     cliente = dati.get("cliente", "")
 
     pdf = FPDF()
@@ -652,7 +670,13 @@ def api_salva_preventivo():
     else:
         sconto_tipo = "percentuale"
         sconto_euro = euro_da_percentuale(articoli, iva, sconto)
-    tot = calcola_totali(articoli, iva, sconto, acconto)
+    tot = calcola_totali(
+        articoli,
+        iva,
+        sconto,
+        acconto,
+        sconto_euro if sconto_tipo == "euro" else None,
+    )
     now = datetime.now().isoformat(timespec="seconds")
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_name = f"{stamp}_{slugify(cliente or 'senza-cliente')}"

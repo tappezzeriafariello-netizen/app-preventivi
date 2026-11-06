@@ -125,10 +125,11 @@
       $("scontoEuro").value = (totaleBase * num($("sconto").value) / 100).toFixed(2);
     }
     const sconto = num($("sconto").value);
+    const scontoEuro = scontoTipo === "euro" ? num($("scontoEuro").value) : null;
     const acconto = num($("acconto").value);
     const valoreIva = imponibile * (iva / 100);
     const totale = imponibile + valoreIva;
-    const valoreSconto = totale * (sconto / 100);
+    const valoreSconto = scontoEuro !== null ? Math.max(0, scontoEuro) : totale * (sconto / 100);
     const totaleScontato = totale - valoreSconto;
     const valoreAcconto = totaleScontato * (acconto / 100);
     const saldo = totaleScontato - valoreAcconto;
