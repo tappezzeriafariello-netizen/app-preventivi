@@ -6,7 +6,7 @@
   const $ = (id) => document.getElementById(id);
   const tbody = document.querySelector("#tabella tbody");
   const emptyMsg = $("emptyMsg");
-  let scontoEuroManuale = false;
+  let scontoTipo = "percentuale";
 
   function num(v) {
     const n = parseFloat(String(v ?? "0").replace(",", "."));
@@ -115,11 +115,14 @@
   function aggiornaTotali() {
     const imponibile = articoli.reduce((s, a) => s + a.totale, 0);
     const iva = num($("iva").value);
-    if (scontoEuroManuale) {
+    if (scontoTipo === "euro") {
       const totaleBase = imponibile * (1 + iva / 100);
       $("sconto").value = totaleBase > 0
         ? Math.round((num($("scontoEuro").value) / totaleBase) * 100)
         : "0";
+    } else {
+      const totaleBase = imponibile * (1 + iva / 100);
+      $("scontoEuro").value = (totaleBase * num($("sconto").value) / 100).toFixed(2);
     }
     const sconto = num($("sconto").value);
     const acconto = num($("acconto").value);
@@ -146,6 +149,7 @@
       iva: $("iva").value,
       sconto: $("sconto").value,
       sconto_euro: $("scontoEuro").value,
+      sconto_tipo: scontoTipo,
       acconto: $("acconto").value,
       articoli,
     };
@@ -161,7 +165,9 @@
     $("iva").value = "0";
     $("sconto").value = "0";
     $("scontoEuro").value = "0";
-    scontoEuroManuale = false;
+    scontoTipo = "percentuale";
+    document.querySelector('input[name="scontoTipo"][value="percentuale"]').checked = true;
+    impostaModoSconto();
     $("acconto").value = "0";
     $("saveStatus").textContent = "";
     render();
@@ -176,6 +182,10 @@
     $("iva").value = data.iva ?? "0";
     $("sconto").value = data.sconto ?? "0";
     $("scontoEuro").value = data.sconto_euro ?? "0";
+    scontoTipo = data.sconto_tipo || "percentuale";
+    const radio = document.querySelector(`input[name="scontoTipo"][value="${scontoTipo}"]`);
+    if (radio) radio.checked = true;
+    impostaModoSconto();
     $("acconto").value = data.acconto ?? "0";
     articoli.length = 0;
     (data.articoli || []).forEach((a) => {
@@ -208,24 +218,23 @@
     $(id).addEventListener("input", aggiornaTotali);
   });
   $("sconto").addEventListener("input", () => {
-    scontoEuroManuale = false;
-    const imponibile = articoli.reduce((s, a) => s + a.totale, 0);
-    const totale = imponibile * (1 + num($("iva").value) / 100);
-    $("scontoEuro").value = (totale * num($("sconto").value) / 100).toFixed(2);
+    if (scontoTipo !== "percentuale") return;
     aggiornaTotali();
   });
   $("scontoEuro").addEventListener("input", () => {
-    scontoEuroManuale = true;
-    if (!String($("scontoEuro").value).trim() || num($("scontoEuro").value) <= 0) {
-      $("sconto").value = "0";
-      aggiornaTotali();
-      return;
-    }
-    const imponibile = articoli.reduce((s, a) => s + a.totale, 0);
-    const totale = imponibile * (1 + num($("iva").value) / 100);
-    const euroSconto = num($("scontoEuro").value);
-    $("sconto").value = totale > 0 ? Math.round((euroSconto / totale) * 100) : "0";
+    if (scontoTipo !== "euro") return;
     aggiornaTotali();
+  });
+  function impostaModoSconto() {
+    $("sconto").readOnly = scontoTipo !== "percentuale";
+    $("scontoEuro").readOnly = scontoTipo !== "euro";
+    aggiornaTotali();
+  }
+  document.querySelectorAll('input[name="scontoTipo"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      scontoTipo = radio.value;
+      impostaModoSconto();
+    });
   });
 
   $("btnNuovo").addEventListener("click", () => {
