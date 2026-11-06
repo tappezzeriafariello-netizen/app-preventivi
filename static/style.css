@@ -207,6 +207,24 @@ table.data th, table.data td {
   border-bottom: 1px solid var(--line);
   text-align: left;
 }
+table.data input {
+  min-width: 0;
+  padding: 0.45rem 0.5rem;
+}
+table.data .line-qty { width: 5rem; }
+table.data .line-price { width: 8rem; text-align: right; }
+.drag-cell { width: 2.5rem; text-align: center !important; }
+.drag-handle {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: grab;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.2rem;
+}
+.drag-handle:active { cursor: grabbing; }
+tr.dragging { opacity: 0.45; }
 table.data th {
   font-size: 0.78rem;
   text-transform: uppercase;

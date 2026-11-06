@@ -101,6 +101,7 @@ def init_db() -> None:
             pagamento TEXT DEFAULT '',
             iva REAL DEFAULT 0,
             sconto REAL DEFAULT 0,
+            sconto_euro REAL DEFAULT 0,
             acconto REAL DEFAULT 0,
             articoli_json TEXT NOT NULL,
             totale REAL DEFAULT 0,
@@ -116,6 +117,9 @@ def init_db() -> None:
         );
         """
     )
+    columns = {row[1] for row in db.execute("PRAGMA table_info(preventivi)")}
+    if "sconto_euro" not in columns:
+        db.execute("ALTER TABLE preventivi ADD COLUMN sconto_euro REAL DEFAULT 0")
     db.commit()
     if APP_PASSWORD:
         row = db.execute("SELECT password_hash FROM auth WHERE id = 1").fetchone()
@@ -181,6 +185,15 @@ def calcola_totali(articoli: list, iva_perc: float, sconto_perc: float, acconto_
         "valore_acconto": valore_acconto,
         "saldo": saldo,
     }
+
+
+def percentuale_da_sconto_euro(
+    articoli: list, iva_perc: float, sconto_perc: float, sconto_euro: float
+) -> float:
+    if sconto_euro <= 0:
+        return sconto_perc
+    totale = sum(float(a.get("totale", 0)) for a in articoli) * (1 + iva_perc / 100)
+    return round(sconto_euro / totale * 100) if totale > 0 else 0
 
 
 def get_azienda() -> dict:
@@ -616,6 +629,7 @@ def api_salva_preventivo():
 
     iva = float(str(data.get("iva", 0)).replace(",", ".") or 0)
     sconto = float(str(data.get("sconto", 0)).replace(",", ".") or 0)
+    sconto_euro = float(str(data.get("sconto_euro", 0)).replace(",", ".") or 0)
     acconto = float(str(data.get("acconto", 0)).replace(",", ".") or 0)
     for a in articoli:
         a["qty"] = int(a["qty"])
@@ -623,6 +637,7 @@ def api_salva_preventivo():
         a["totale"] = a["qty"] * a["prezzo"]
         a["desc"] = str(a.get("desc", "")).strip()
 
+    sconto = percentuale_da_sconto_euro(articoli, iva, sconto, sconto_euro)
     tot = calcola_totali(articoli, iva, sconto, acconto)
     now = datetime.now().isoformat(timespec="seconds")
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -635,6 +650,7 @@ def api_salva_preventivo():
         "pagamento": data.get("pagamento") or "",
         "iva": iva,
         "sconto": sconto,
+        "sconto_euro": sconto_euro,
         "acconto": acconto,
         "articoli": articoli,
     }
@@ -651,7 +667,7 @@ def api_salva_preventivo():
     if pid:
         db.execute(
             """UPDATE preventivi SET cliente=?, data=?, consegna=?, pagamento=?,
-               iva=?, sconto=?, acconto=?, articoli_json=?, totale=?, saldo=?,
+               iva=?, sconto=?, sconto_euro=?, acconto=?, articoli_json=?, totale=?, saldo=?,
                nome_file=?, updated_at=? WHERE id=?""",
             (
                 cliente,
@@ -660,6 +676,7 @@ def api_salva_preventivo():
                 payload["pagamento"],
                 iva,
                 sconto,
+                sconto_euro,
                 acconto,
                 json.dumps(articoli, ensure_ascii=False),
                 tot["totale_scontato"],
@@ -674,9 +691,9 @@ def api_salva_preventivo():
     else:
         cur = db.execute(
             """INSERT INTO preventivi
-               (cliente, data, consegna, pagamento, iva, sconto, acconto,
+               (cliente, data, consegna, pagamento, iva, sconto, sconto_euro, acconto,
                 articoli_json, totale, saldo, nome_file, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 cliente,
                 payload["data"],
@@ -684,6 +701,7 @@ def api_salva_preventivo():
                 payload["pagamento"],
                 iva,
                 sconto,
+                sconto_euro,
                 acconto,
                 json.dumps(articoli, ensure_ascii=False),
                 tot["totale_scontato"],
@@ -753,13 +771,18 @@ def api_pdf_preview():
         a["qty"] = int(a["qty"])
         a["prezzo"] = float(str(a["prezzo"]).replace(",", "."))
         a["totale"] = a["qty"] * a["prezzo"]
+    iva = float(str(data.get("iva", 0)).replace(",", ".") or 0)
+    sconto = float(str(data.get("sconto", 0)).replace(",", ".") or 0)
+    sconto_euro = float(str(data.get("sconto_euro", 0)).replace(",", ".") or 0)
+    sconto = percentuale_da_sconto_euro(articoli, iva, sconto, sconto_euro)
     payload = {
         "cliente": data.get("cliente") or "",
         "data": data.get("data") or "",
         "consegna": data.get("consegna") or "",
         "pagamento": data.get("pagamento") or "",
-        "iva": float(str(data.get("iva", 0)).replace(",", ".") or 0),
-        "sconto": float(str(data.get("sconto", 0)).replace(",", ".") or 0),
+        "iva": iva,
+        "sconto": sconto,
+        "sconto_euro": sconto_euro,
         "acconto": float(str(data.get("acconto", 0)).replace(",", ".") or 0),
         "articoli": articoli,
     }

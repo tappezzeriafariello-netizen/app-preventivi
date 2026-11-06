@@ -67,6 +67,7 @@
   <table class="data" id="tabella">
     <thead>
       <tr>
+        <th aria-label="Ordina"></th>
         <th>Q.tà</th>
         <th>Descrizione</th>
         <th class="num">Prezzo unit.</th>
@@ -89,6 +90,10 @@
     <div>
       <label for="sconto">Sconto (%)</label>
       <input type="text" id="sconto" value="{{ preventivo.sconto if preventivo else '0' }}">
+    </div>
+    <div>
+      <label for="scontoEuro">Sconto (€)</label>
+      <input type="text" id="scontoEuro" value="{{ preventivo.sconto_euro if preventivo else '0' }}" inputmode="decimal">
     </div>
     <div>
       <label for="acconto">Acconto (%)</label>

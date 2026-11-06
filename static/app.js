@@ -6,6 +6,7 @@
   const $ = (id) => document.getElementById(id);
   const tbody = document.querySelector("#tabella tbody");
   const emptyMsg = $("emptyMsg");
+  let scontoEuroManuale = false;
 
   function num(v) {
     const n = parseFloat(String(v ?? "0").replace(",", "."));
@@ -20,11 +21,14 @@
     tbody.innerHTML = "";
     articoli.forEach((a, i) => {
       const tr = document.createElement("tr");
+      tr.draggable = true;
+      tr.dataset.index = i;
       tr.innerHTML = `
-        <td>${a.qty}</td>
-        <td>${escapeHtml(a.desc)}</td>
-        <td class="num">${euro(a.prezzo)}</td>
-        <td class="num">${euro(a.totale)}</td>
+        <td class="drag-cell"><button type="button" class="drag-handle" aria-label="Sposta riga" title="Sposta riga">☰</button></td>
+        <td><input class="line-qty" type="number" min="1" step="1" value="${a.qty}"></td>
+        <td><input class="line-desc" type="text" value="${escapeHtml(a.desc)}"></td>
+        <td class="num"><input class="line-price" type="text" inputmode="decimal" value="${a.prezzo}"></td>
+        <td class="num line-total">${euro(a.totale)}</td>
         <td><button type="button" class="btn btn-danger" data-i="${i}">Elimina</button></td>`;
       tbody.appendChild(tr);
     });
@@ -32,6 +36,44 @@
     tbody.querySelectorAll("[data-i]").forEach((btn) => {
       btn.addEventListener("click", () => {
         articoli.splice(Number(btn.getAttribute("data-i")), 1);
+        render();
+      });
+    });
+    tbody.querySelectorAll("tr").forEach((tr) => {
+      const i = Number(tr.dataset.index);
+      tr.querySelector(".line-qty").addEventListener("input", (event) => {
+        const qty = parseInt(event.target.value, 10);
+        articoli[i].qty = Number.isFinite(qty) && qty > 0 ? qty : 0;
+        articoli[i].totale = articoli[i].qty * articoli[i].prezzo;
+        tr.querySelector(".line-total").textContent = euro(articoli[i].totale);
+        aggiornaTotali();
+      });
+      tr.querySelector(".line-desc").addEventListener("input", (event) => {
+        articoli[i].desc = event.target.value;
+      });
+      tr.querySelector(".line-price").addEventListener("input", (event) => {
+        articoli[i].prezzo = num(event.target.value);
+        articoli[i].totale = articoli[i].qty * articoli[i].prezzo;
+        tr.querySelector(".line-total").textContent = euro(articoli[i].totale);
+        aggiornaTotali();
+      });
+      tr.addEventListener("dragstart", (event) => {
+        if (!event.target.closest(".drag-handle")) {
+          event.preventDefault();
+          return;
+        }
+        tr.classList.add("dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", String(i));
+      });
+      tr.addEventListener("dragend", () => tr.classList.remove("dragging"));
+      tr.addEventListener("dragover", (event) => event.preventDefault());
+      tr.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const from = Number(event.dataTransfer.getData("text/plain"));
+        if (!Number.isInteger(from) || from === i) return;
+        const [moved] = articoli.splice(from, 1);
+        articoli.splice(i, 0, moved);
         render();
       });
     });
@@ -49,6 +91,12 @@
   function aggiornaTotali() {
     const imponibile = articoli.reduce((s, a) => s + a.totale, 0);
     const iva = num($("iva").value);
+    if (scontoEuroManuale) {
+      const totaleBase = imponibile * (1 + iva / 100);
+      $("sconto").value = totaleBase > 0
+        ? Math.round((num($("scontoEuro").value) / totaleBase) * 100)
+        : "0";
+    }
     const sconto = num($("sconto").value);
     const acconto = num($("acconto").value);
     const valoreIva = imponibile * (iva / 100);
@@ -73,6 +121,7 @@
       pagamento: $("pagamento").value.trim(),
       iva: $("iva").value,
       sconto: $("sconto").value,
+      sconto_euro: $("scontoEuro").value,
       acconto: $("acconto").value,
       articoli,
     };
@@ -87,6 +136,8 @@
     $("pagamento").value = "DA CONCORDARE";
     $("iva").value = "0";
     $("sconto").value = "0";
+    $("scontoEuro").value = "0";
+    scontoEuroManuale = false;
     $("acconto").value = "0";
     $("saveStatus").textContent = "";
     render();
@@ -100,6 +151,7 @@
     $("pagamento").value = data.pagamento || "";
     $("iva").value = data.iva ?? "0";
     $("sconto").value = data.sconto ?? "0";
+    $("scontoEuro").value = data.sconto_euro ?? "0";
     $("acconto").value = data.acconto ?? "0";
     articoli.length = 0;
     (data.articoli || []).forEach((a) => {
@@ -128,8 +180,23 @@
     render();
   });
 
-  ["iva", "sconto", "acconto"].forEach((id) => {
+  ["iva", "acconto"].forEach((id) => {
     $(id).addEventListener("input", aggiornaTotali);
+  });
+  $("sconto").addEventListener("input", () => {
+    scontoEuroManuale = false;
+    const imponibile = articoli.reduce((s, a) => s + a.totale, 0);
+    const totale = imponibile * (1 + num($("iva").value) / 100);
+    $("scontoEuro").value = (totale * num($("sconto").value) / 100).toFixed(2);
+    aggiornaTotali();
+  });
+  $("scontoEuro").addEventListener("input", () => {
+    scontoEuroManuale = true;
+    const imponibile = articoli.reduce((s, a) => s + a.totale, 0);
+    const totale = imponibile * (1 + num($("iva").value) / 100);
+    const euroSconto = num($("scontoEuro").value);
+    $("sconto").value = totale > 0 ? Math.round((euroSconto / totale) * 100) : "0";
+    aggiornaTotali();
   });
 
   $("btnNuovo").addEventListener("click", () => {
