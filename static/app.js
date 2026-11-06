@@ -21,7 +21,6 @@
     tbody.innerHTML = "";
     articoli.forEach((a, i) => {
       const tr = document.createElement("tr");
-      tr.draggable = true;
       tr.dataset.index = i;
       tr.innerHTML = `
         <td class="drag-cell"><button type="button" class="drag-handle" aria-label="Sposta riga" title="Sposta riga">☰</button></td>
@@ -57,24 +56,49 @@
         tr.querySelector(".line-total").textContent = euro(articoli[i].totale);
         aggiornaTotali();
       });
-      tr.addEventListener("dragstart", (event) => {
-        if (!event.target.closest(".drag-handle")) {
-          event.preventDefault();
-          return;
-        }
-        tr.classList.add("dragging");
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", String(i));
-      });
-      tr.addEventListener("dragend", () => tr.classList.remove("dragging"));
-      tr.addEventListener("dragover", (event) => event.preventDefault());
-      tr.addEventListener("drop", (event) => {
+      const handle = tr.querySelector(".drag-handle");
+      handle.addEventListener("pointerdown", (event) => {
         event.preventDefault();
-        const from = Number(event.dataTransfer.getData("text/plain"));
-        if (!Number.isInteger(from) || from === i) return;
-        const [moved] = articoli.splice(from, 1);
-        articoli.splice(i, 0, moved);
-        render();
+        let draggedIndex = i;
+        tr.classList.add("dragging");
+        handle.setPointerCapture(event.pointerId);
+
+        const move = (moveEvent) => {
+          const target = document
+            .elementFromPoint(moveEvent.clientX, moveEvent.clientY)
+            ?.closest("tr");
+          if (!target || target.parentElement !== tbody) return;
+          const targetIndex = Number(target.dataset.index);
+          if (!Number.isInteger(targetIndex) || targetIndex === draggedIndex) return;
+
+          const insertAfter = moveEvent.clientY > target.getBoundingClientRect().top
+            + target.getBoundingClientRect().height / 2;
+          const [moved] = articoli.splice(draggedIndex, 1);
+          const nextIndex = insertAfter && targetIndex > draggedIndex
+            ? targetIndex
+            : insertAfter ? targetIndex + 1 : targetIndex;
+          articoli.splice(nextIndex, 0, moved);
+          const rows = [...tbody.querySelectorAll("tr")];
+          const movedRow = rows[draggedIndex];
+          tbody.insertBefore(
+            movedRow,
+            insertAfter ? target.nextElementSibling : target
+          );
+          [...tbody.querySelectorAll("tr")].forEach((row, index) => {
+            row.dataset.index = index;
+          });
+          draggedIndex = nextIndex;
+        };
+        const end = () => {
+          tr.classList.remove("dragging");
+          document.removeEventListener("pointermove", move);
+          document.removeEventListener("pointerup", end);
+          document.removeEventListener("pointercancel", end);
+          render();
+        };
+        document.addEventListener("pointermove", move);
+        document.addEventListener("pointerup", end, { once: true });
+        document.addEventListener("pointercancel", end, { once: true });
       });
     });
     aggiornaTotali();
@@ -192,6 +216,11 @@
   });
   $("scontoEuro").addEventListener("input", () => {
     scontoEuroManuale = true;
+    if (!String($("scontoEuro").value).trim() || num($("scontoEuro").value) <= 0) {
+      $("sconto").value = "0";
+      aggiornaTotali();
+      return;
+    }
     const imponibile = articoli.reduce((s, a) => s + a.totale, 0);
     const totale = imponibile * (1 + num($("iva").value) / 100);
     const euroSconto = num($("scontoEuro").value);

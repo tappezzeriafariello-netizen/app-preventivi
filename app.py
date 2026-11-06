@@ -637,7 +637,10 @@ def api_salva_preventivo():
         a["totale"] = a["qty"] * a["prezzo"]
         a["desc"] = str(a.get("desc", "")).strip()
 
-    sconto = percentuale_da_sconto_euro(articoli, iva, sconto, sconto_euro)
+    if "sconto_euro" in data and sconto_euro <= 0:
+        sconto = 0
+    else:
+        sconto = percentuale_da_sconto_euro(articoli, iva, sconto, sconto_euro)
     tot = calcola_totali(articoli, iva, sconto, acconto)
     now = datetime.now().isoformat(timespec="seconds")
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -774,7 +777,10 @@ def api_pdf_preview():
     iva = float(str(data.get("iva", 0)).replace(",", ".") or 0)
     sconto = float(str(data.get("sconto", 0)).replace(",", ".") or 0)
     sconto_euro = float(str(data.get("sconto_euro", 0)).replace(",", ".") or 0)
-    sconto = percentuale_da_sconto_euro(articoli, iva, sconto, sconto_euro)
+    if "sconto_euro" in data and sconto_euro <= 0:
+        sconto = 0
+    else:
+        sconto = percentuale_da_sconto_euro(articoli, iva, sconto, sconto_euro)
     payload = {
         "cliente": data.get("cliente") or "",
         "data": data.get("data") or "",
